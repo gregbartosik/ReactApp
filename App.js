@@ -30,7 +30,7 @@ const App = () => {
     
   const searchedStories = stories.filter((story) =>
     //return story.title.includes(searchTerm);
-    (story.title.toLowerCase().includes(searchTerm) || story.author.toLowerCase().includes(searchTerm)) 
+    (story.title.toLowerCase().includes(searchTerm.toLowerCase()) || story.author.toLowerCase().includes(searchTerm.toLowerCase())) 
   );
 
   return (
