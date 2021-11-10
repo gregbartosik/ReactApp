@@ -56,4 +56,22 @@
 	position: relative;
   }
   
+  .coffee-header{
+	  margin-bottom: 0px;
+  }
+  .leftcol {
+	margin-top: 6px;
+    width:60px;
+    height:auto;
+    float:left;
+	display: block;
+ }
+ .leftcol-br{
+	margin-bottom: 400px;
+	
+ }
+ .radioGroup{
+	 color: #ffffff;
+ }
+
    
