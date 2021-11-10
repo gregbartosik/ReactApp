@@ -1,33 +1,22 @@
 import * as React from 'react';
 import axios from 'axios';
-import react from 'react';
-import {DatePicker} from 'antd';
 import { Button } from 'antd';
-import { Space } from 'antd';
+import { Radio,RadioGroup} from 'antd';
 import styles from './style.module.scss';
 import './styles.css';
 import './App.css';
 import { ReactComponent as Check } from './check.svg';
-import { Component } from 'react';
 import lines from 'svg-patterns/p/lines';
 import stringify from 'virtual-dom-stringify';
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { fab } from '@fortawesome/free-brands-svg-icons'
+import { faCheckSquare, faCoffee } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { FaBeer } from 'react-icons/fa';
+
+library.add(fab, faCheckSquare, faCoffee)
  
-
-
 const API_ENDPOINT = 'https://hn.algolia.com/api/v1/search?query=';
-
-
-const useSemiPersistentState = (key, initialState) => {
-  const [value, setValue] = React.useState(
-    localStorage.getItem(key) || initialState
-  );
-
-  React.useEffect(() => {
-    localStorage.setItem(key, value);
-  }, [value, key]);
-
-  return [value, setValue];
-};
 
 const storiesReducer = (state, action) => {
   switch (action.type) {
@@ -62,37 +51,56 @@ const storiesReducer = (state, action) => {
   }
 };
 
-const App = () => {
+const useSemiPersistentState = (key, initialState) => {
+  const [value, setValue] = React.useState(
+    localStorage.getItem(key) || initialState
+  );
+
+  React.useEffect(() => {
+    localStorage.setItem(key, value);
+  }, [value, key]);
+
+  return [value, setValue];
+};
+
+const App = () => { 
+  const [radioValue,setValue] = React.useState();
+  const handleChange = (event) => {
+    console.log("before:", radioValue)
+    setValue(event.target.value);  
+    console.log('radio checked', event.target.value);
+  };
   
   const [searchTerm, setSearchTerm] = useSemiPersistentState(
     'search',
-    'Redux'
+    'React'
   );
-
+  const [url,setUrl] = React.useState(`${API_ENDPOINT}${searchTerm}`);
   const [stories, dispatchStories] = React.useReducer(
     storiesReducer,
     { data: [], isLoading: false, isError: false }
   );
-  let isLoadingProp = false;
-  React.useEffect(() =>{
-    dispatchStories({ type: 'STORIES_FETCH_INIT' });
-    //isLoadingProp = true;
-  axios
-  .get(`${API_ENDPOINT}${searchTerm}`)
-  .then((result) => {
-    dispatchStories({
-      type: 'STORIES_FETCH_SUCCESS',
-      payload: result.data.hits,
-    });
-    setTimeout(()=> {isLoadingProp = false},2000);
-  })
-  .catch(() =>
-    dispatchStories({ type: 'STORIES_FETCH_FAILURE' })
-  );
   
-  },[]);
+  const handleFetchStories = React.useCallback(async ()=> {
+    dispatchStories({ type: 'STORIES_FETCH_INIT' });
+    try{
+    const result = await axios.get(url);
+    dispatchStories({
+        type: 'STORIES_FETCH_SUCCESS',
+        payload: result.data.hits.slice(radioValue),
+      });  
+    }
+    catch{
+      dispatchStories({ type: 'STORIES_FETCH_FAILURE' })
+    }
+  },[url,radioValue]);
+  
+  
+  React.useEffect(() =>{ 
+  handleFetchStories(); 
+  },[handleFetchStories]);
 
-  const [url,setUrl] = React.useState(`$(API_ENDPOINT)${searchTerm} ${'hitsPerPage=5'}`);
+  
   
   const handleSearchInput = (event) => {
     setSearchTerm(event.target.value);
@@ -105,48 +113,31 @@ const App = () => {
   };
   
 
-const handleFetchStories = React.useCallback(async ()=> {
-  dispatchStories({ type: 'STORIES_FETCH_INIT' });
-
-  try{
-  const result = await axios.get(url);
-    dispatchStories({
-      type: 'STORIES_FETCH_SUCCESS',
-      payload: result.data.hits,
-    })
-  }
-  catch{
-    dispatchStories({ type: 'STORIES_FETCH_FAILURE' })
-  }
-}, [url]);
-
-
-  React.useEffect(() => {
-   handleFetchStories();
-  },[handleFetchStories]);
-
   const handleRemoveStory = (item) => {
     dispatchStories({
       type: 'REMOVE_STORY',
       payload: item,
     });
   };
+  
 
    
   return (
     <>
     <BackgroundPattern pttrn={pattern}>
-      <h1 class='headline-primary'>My Hacker Stories</h1>
+      <LeftCol />
+      <h1 className='headline-primary'><strong>My Hacker Stories</strong></h1>
+      <CoffeeMessage />
       </BackgroundPattern>
-      <div className="container">
+      
+      <div className="container" >
       <SearchForm
       searchTerm={searchTerm}
       onSearchInput={handleSearchInput}
       onSearchSubmit={handleSearchSubmit} 
       />
-      
+      <RadioButtons class= "rb" change={handleChange} rv={radioValue}/>
       <hr />
-      
       {stories.isError && <p>Something went wrong ...</p>}
 
       {stories.isLoading ? (
@@ -157,15 +148,15 @@ const handleFetchStories = React.useCallback(async ()=> {
           onRemoveItem={handleRemoveStory}
         />
       )}
-      <BasicSvg/>
-      
+  
+      <BasicSvg/>    
     </div>
     </>
   );
 };
 
 const SearchForm = ({searchTerm, onSearchInput, onSearchSubmit}) => (
-<form onFinish={onSearchSubmit} className={styles.searchForm}>
+<form onSubmit={onSearchSubmit} className={styles.searchForm}>
     <InputWithLabel
       id="search"
       value={searchTerm}
@@ -175,7 +166,7 @@ const SearchForm = ({searchTerm, onSearchInput, onSearchSubmit}) => (
       <strong>Search:</strong>
     </InputWithLabel>
     
-    <Button type="primary" htmlType="submit" disabled={!searchTerm}>Button</Button>
+    <Button type="primary" htmlType="submit" disabled={!searchTerm}>Submit</Button>
   </form>
 )
 
@@ -268,9 +259,29 @@ const BasicSvg = () =>
       <defs dangerouslySetInnerHTML={{ __html: stringify(pttrn) }}></defs>
       <rect width="100%" height="100%" style={{ fill: pttrn.url() }}/>
     </svg>
- 
     {children}
- 
   </div>
 
+  const CoffeeMessage = () =>
+  <div>
+    <h2 className='coffee-header' ><FontAwesomeIcon icon="check-square" />Your <FontAwesomeIcon icon="coffee" /> is hot and ready!</h2>
+  </div>
+
+  const LeftCol = () =>
+  <div className='leftcol'>
+    <FontAwesomeIcon icon={['fab', 'apple']} size="4x" /> <div className='leftcol-br' />
+    <FontAwesomeIcon icon={['fab', 'microsoft']} size="4x" /> <div className='leftcol-br' />
+    <FontAwesomeIcon icon={['fab', 'google']} size="4x" />
+  </div>
+
+const RadioButtons = ({change, rv}) =>{
+ return(
+   <span> <span class='radioGroup' >Hits Per Page: </span>
+      <label>5</label><input type="radio" value="15" name="group1" onChange={change} checked={rv ==="15"}  />
+      <label>10</label><input type="radio" value="10"  name="group1" onChange={change} checked={rv ==="10"}  />
+      <label>15</label><input type="radio" value="5" name="group1" onChange={change} checked={rv ==="5"}  />
+      <label>20</label><input type="radio" value="0" name="group1" onChange={change} checked={rv ==="0"}  />
+  </span>
+ );
+};
 export default App;
